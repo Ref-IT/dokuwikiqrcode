@@ -95,8 +95,7 @@ class syntax_plugin_qrcode_qrcode extends DokuWiki_Syntax_Plugin
             QRcode::png($txt,false,QR_ECLEVEL_L,1,1);
             $img = ob_get_contents();
             ob_end_clean();
-            $uri = "data:image/png;base64," . base64_encode($img);
-            return '<img src="'.htmlspecialchars($uri).'" style="valign:top;" alt="'.htmlspecialchars($txt).'" />';
+            return Array("img" => $img, "txt" => $txt);
         }
         return false;
     }
@@ -107,9 +106,21 @@ class syntax_plugin_qrcode_qrcode extends DokuWiki_Syntax_Plugin
      */
     function render($mode, & $renderer, $data)
     {
+
         if ($mode == 'xhtml' && $data !== false)
         {
-            $renderer->doc .= $data;
+            $renderer->doc .= '<img src="data:image/png;base64,'.base64_encode($data["img"]).'" style="valign:top;" alt="'.htmlspecialchars($data["txt"]).'" />';
+            return true;
+        }
+        if ($mode == 'odt' && $data !== false)
+        {
+            if (!($tmp = io_mktmpdir())) return false;
+            $path = $tmp.'/qr-'.md5($data["img"]).".png";
+            file_put_contents($path, $data["img"]);
+            #$renderer->_odtAddImage($path, /* $width = */ NULL, /* $height = */ NULL, /* $align = */ NULL, /* $title = */ $data["txt"], /* $style = */ NULL, /* $returnonly = */ false);
+            $renderer->_odtAddImage($path);
+            unlink($path);
+            if ($tmp) io_rmdir($tmp, true);
             return true;
         }
         return false;
